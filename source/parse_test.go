@@ -242,3 +242,28 @@ P125,My name is,Slim Shady
 		})
 	})
 })
+
+var _ = Describe("SourceBackstage", func() {
+	var (
+		sourceBackstage source.SourceBackstage
+	)
+
+	BeforeEach(func() {
+		sourceBackstage = source.SourceBackstage{
+			Endpoint: "http://localhost:7007/api/catalog/entities/by-query",
+			Token:    "test-token",
+			SignJWT:  nil,
+			Filters:  "kind=Component",
+			Limit:    10,
+			Offset:   0,
+		}
+	})
+
+	Describe("Load", func() {
+		It("constructs the URL with query parameters", func() {
+			entries, err := sourceBackstage.Load(context.Background(), nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).NotTo(BeEmpty())
+		})
+	})
+})

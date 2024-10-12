@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	kitlog "github.com/go-kit/kit/log"
@@ -17,9 +18,12 @@ import (
 )
 
 type SourceBackstage struct {
-	Endpoint string     `json:"endpoint"` // https://backstage.company.io/api/catalog/entities
+	Endpoint string     `json:"endpoint"` // https://backstage.company.io/api/catalog/entities/by-query
 	Token    Credential `json:"token"`
 	SignJWT  *bool      `json:"sign_jwt"`
+	Filters  string     `json:"filters,omitempty"`
+	Limit    int        `json:"limit,omitempty"`
+	Offset   int        `json:"offset,omitempty"`
 }
 
 func (s SourceBackstage) Validate() error {
@@ -54,14 +58,26 @@ func (s SourceBackstage) Load(ctx context.Context, logger kitlog.Logger) ([]*Sou
 
 	client := cleanhttp.DefaultClient()
 
-	var (
-		limit  = 100
-		offset = 0
-	)
-
 	entries := []*SourceEntry{}
 	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.Endpoint+fmt.Sprintf("?limit=%d&offset=%d", limit, offset), nil)
+		reqURL, err := url.Parse(s.Endpoint)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing Backstage endpoint URL")
+		}
+
+		query := reqURL.Query()
+		if s.Filters != "" {
+			query.Set("filter", s.Filters)
+		}
+		if s.Limit > 0 {
+			query.Set("limit", fmt.Sprintf("%d", s.Limit))
+		}
+		if s.Offset > 0 {
+			query.Set("offset", fmt.Sprintf("%d", s.Offset))
+		}
+		reqURL.RawQuery = query.Encode()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL.String(), nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "building Backstage URL")
 		}
@@ -93,7 +109,7 @@ func (s SourceBackstage) Load(ctx context.Context, logger kitlog.Logger) ([]*Sou
 			})
 		}
 
-		offset += len(page)
+		s.Offset += len(page)
 	}
 }
 

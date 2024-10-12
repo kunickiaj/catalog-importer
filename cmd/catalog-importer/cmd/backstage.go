@@ -18,6 +18,9 @@ type BackstageOptions struct {
 	BackstageEndpoint string
 	BackstageToken    string
 	BackstageSignJWT  bool
+	Filters           string
+	Limit             int
+	Offset            int
 }
 
 func (opt *BackstageOptions) Bind(cmd *kingpin.CmdClause) *BackstageOptions {
@@ -29,7 +32,7 @@ func (opt *BackstageOptions) Bind(cmd *kingpin.CmdClause) *BackstageOptions {
 		Envar("INCIDENT_API_KEY").
 		StringVar(&opt.APIKey)
 	cmd.Flag("backstage-endpoint", "Endpoint of the Backstage entries API").
-		Default("http://localhost:7007/api/catalog/entities").
+		Default("http://localhost:7007/api/catalog/entities/by-query").
 		Envar("BACKSTAGE_ENDPOINT").
 		StringVar(&opt.BackstageEndpoint)
 	cmd.Flag("backstage-token", "Token of the Backstage entries API. Optional").
@@ -40,6 +43,18 @@ func (opt *BackstageOptions) Bind(cmd *kingpin.CmdClause) *BackstageOptions {
 		Default("true").
 		Envar("BACKSTAGE_SIGN_JWT").
 		BoolVar(&opt.BackstageSignJWT)
+	cmd.Flag("filters", "Query filters for the Backstage entities API").
+		Default("").
+		Envar("BACKSTAGE_FILTERS").
+		StringVar(&opt.Filters)
+	cmd.Flag("limit", "Limit for the Backstage entities API").
+		Default("0").
+		Envar("BACKSTAGE_LIMIT").
+		IntVar(&opt.Limit)
+	cmd.Flag("offset", "Offset for the Backstage entities API").
+		Default("0").
+		Envar("BACKSTAGE_OFFSET").
+		IntVar(&opt.Offset)
 
 	return opt
 }
@@ -64,6 +79,9 @@ func (opt *BackstageOptions) Run(ctx context.Context, logger kitlog.Logger) erro
 						Endpoint: opt.BackstageEndpoint,
 						Token:    source.Credential(opt.BackstageToken),
 						SignJWT:  &opt.BackstageSignJWT,
+						Filters:  opt.Filters,
+						Limit:    opt.Limit,
+						Offset:   opt.Offset,
 					},
 				},
 			}
